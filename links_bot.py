@@ -2,6 +2,7 @@ import os
 import json
 import re
 import gspread
+from urllib.parse import urlparse, urlunparse
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 
@@ -45,9 +46,21 @@ sheet = gc.open_by_url(SHEET_URL).sheet1
 URL_REGEX = re.compile(r'https?://[^\s<>\]\),;"]+')
 TRAILING_CHARS = ',.;:)]}>"\''
 
+def normalize_url(url: str) -> str:
+    parsed = urlparse(url)
+    clean = parsed._replace(query="", fragment="")
+    normalized = urlunparse(clean)
+
+    # Remove trailing slash from Instagram usernames
+    if normalized.startswith("https://www.instagram.com/") and normalized.endswith("/"):
+        normalized = normalized.rstrip("/")
+
+    return normalized
+
 def clean_urls(text):
     raw = URL_REGEX.findall(text)
-    return [url.rstrip(TRAILING_CHARS) for url in raw]
+    cleaned = [url.rstrip(TRAILING_CHARS) for url in raw]
+    return [normalize_url(url) for url in cleaned]
 
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     urls = clean_urls(update.message.text)
