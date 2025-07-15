@@ -62,21 +62,46 @@ def clean_urls(text):
     cleaned = [url.rstrip(TRAILING_CHARS) for url in raw]
     return [normalize_url(url) for url in cleaned]
 
+def categorize_url(url: str) -> str:
+    if "instagram.com" in url:
+        return "Instagram"
+    elif "tiktok.com" in url:
+        return "TikTok"
+    elif "youtube.com" in url or "youtu.be" in url:
+        return "YouTube"
+    else:
+        return "Other"
+
+def get_or_create_sheet(sheet_title: str):
+    try:
+        return gc.open_by_url(SHEET_URL).worksheet(sheet_title)
+    except gspread.exceptions.WorksheetNotFound:
+        return gc.open_by_url(SHEET_URL).add_worksheet(title=sheet_title, rows="1000", cols="1")
+
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     urls = clean_urls(update.message.text)
     if not urls:
         await update.message.reply_text("🤬 No links found in the message.")
         return
 
-    values = sheet.col_values(1)
-    responses = []
+    categorized = {}
 
     for url in urls:
-        if url in values:
-            responses.append(f"😥 Duplicate: {url} ignored")
-        else:
-            sheet.append_row([url])
-            responses.append(f"✅ Added: {url}")
+        category = categorize_url(url)
+        categorized.setdefault(category, []).append(url)
+
+    responses = []
+
+    for category, url_list in categorized.items():
+        ws = get_or_create_sheet(category)
+        existing = ws.col_values(1)
+
+        for url in url_list:
+            if url in existing:
+                responses.append(f"😥 Duplicate in {category}: {url} ignored")
+            else:
+                ws.append_row([url])
+                responses.append(f"✅ Added to {category}: {url}")
 
     await update.message.reply_text("\n".join(responses))
 
