@@ -51,7 +51,6 @@ def normalize_url(url: str) -> str:
     clean = parsed._replace(query="", fragment="")
     normalized = urlunparse(clean)
 
-    # Remove trailing slash from Instagram usernames
     if normalized.startswith("https://www.instagram.com/") and normalized.endswith("/"):
         normalized = normalized.rstrip("/")
 
@@ -64,13 +63,13 @@ def clean_urls(text):
 
 def categorize_url(url: str) -> str:
     if "instagram.com" in url:
-        return "Instagram"
+        return "instagram"
     elif "tiktok.com" in url:
-        return "TikTok"
+        return "tiktok"
     elif "youtube.com" in url or "youtu.be" in url:
-        return "YouTube"
+        return "youtube"
     else:
-        return "Other"
+        return "other"
 
 def get_or_create_sheet(sheet_title: str):
     try:
